@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  role          String    @default("customer") // "customer" | "admin"
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+
+  verificationTokens VerificationToken[]
+  orders             Order[]
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  type      String   @default("email") // "email" | "reset"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  emoji    String    @default("👕")
+  order    Int       @default(0)
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String   @default("")
+  price       Int // precio en pesos (entero, sin decimales)
+  emoji       String   @default("👕")
+  imageUrl    String   @default("")
+  sizes       String   @default("S,M,L,XL") // talles separados por coma
+  stock       Int      @default(0)
+  featured    Boolean  @default(false)
+  active      Boolean  @default(true)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  orderItems OrderItem[]
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id])
+  email        String
+  fullName     String
+  phone        String      @default("")
+  address      String      @default("")
+  city         String      @default("")
+  province     String      @default("")
+  zip          String      @default("")
+  notes        String      @default("")
+  total        Int
+  status       String      @default("pending") // pending | paid | shipped | cancelled
+  paymentId    String      @default("")
+  createdAt    DateTime    @default(now())
+  items        OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+  name      String
+  price     Int
+  quantity  Int
+  size      String  @default("")
+}
