@@ -46,7 +46,7 @@ export default function AddToCartForm({ product }: { product: Product }) {
             −
           </button>
           <span className="w-10 text-center">{qty}</span>
-          <button className="px-3 py-2" onClick={() => setQty((q) => q + 1)}>
+          <button className="px-3 py-2" onClick={() => setQty((q) => Math.min(Math.max(product.stock, 1), q + 1))}>
             +
           </button>
         </div>

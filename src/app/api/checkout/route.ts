@@ -12,7 +12,7 @@ const schema = z.object({
       z.object({
         productId: z.string(),
         size: z.string().default(""),
-        quantity: z.number().int().min(1),
+        quantity: z.number().int().min(1).max(99),
       })
     )
     .min(1),
@@ -38,24 +38,53 @@ export async function POST(req: NextRequest) {
   }
   const { items, customer } = parsed.data;
 
-  // Traer precios reales desde la base (no confiamos en el precio del cliente)
-  type ProductRow = { id: string; name: string; price: number };
+  // Traer precios reales desde la base (no confiamos en el precio del cliente).
+  // Solo productos visibles: los ocultos no se pueden comprar.
+  type ProductRow = { id: string; name: string; price: number; stock: number; sizes: string };
   const products = await prisma.product.findMany({
-    where: { id: { in: items.map((i) => i.productId) } },
+    where: { id: { in: items.map((i) => i.productId) }, active: true },
   });
   const map = new Map<string, ProductRow>(
     (products as ProductRow[]).map((p) => [p.id, p] as [string, ProductRow])
   );
 
-  const orderItems = items.map((i) => {
-    const p = map.get(i.productId);
-    if (!p) throw new Error("Producto inexistente");
-    return { product: p, size: i.size, quantity: i.quantity };
-  });
-
   const missing = items.find((i) => !map.get(i.productId));
   if (missing) {
     return NextResponse.json({ error: "Alguno de los productos ya no está disponible." }, { status: 400 });
+  }
+
+  const orderItems = items.map((i) => ({ product: map.get(i.productId)!, size: i.size, quantity: i.quantity }));
+
+  // El talle tiene que ser uno de los del producto (si el producto no tiene talles, es "Único")
+  for (const i of orderItems) {
+    const sizes = i.product.sizes.split(",").map((s) => s.trim()).filter(Boolean);
+    const validSize = sizes.length > 0 ? sizes.includes(i.size) : i.size === "" || i.size === "Único";
+    if (!validSize) {
+      return NextResponse.json(
+        { error: `El talle "${i.size}" no está disponible para ${i.product.name}.` },
+        { status: 400 }
+      );
+    }
+  }
+
+  // El stock es por producto, así que se suman todos los talles pedidos de un mismo producto
+  const requested = new Map<string, number>();
+  for (const i of orderItems) {
+    requested.set(i.product.id, (requested.get(i.product.id) || 0) + i.quantity);
+  }
+  for (const [id, quantity] of Array.from(requested)) {
+    const p = map.get(id)!;
+    if (quantity > p.stock) {
+      return NextResponse.json(
+        {
+          error:
+            p.stock > 0
+              ? `De ${p.name} quedan solo ${p.stock} unidades. Ajustá la cantidad en tu carrito.`
+              : `${p.name} se quedó sin stock. Quitalo del carrito para continuar.`,
+        },
+        { status: 400 }
+      );
+    }
   }
 
   const total = orderItems.reduce((sum, i) => sum + i.product.price * i.quantity, 0);

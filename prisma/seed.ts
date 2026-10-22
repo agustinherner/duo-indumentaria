@@ -97,11 +97,18 @@ async function main() {
 
   console.log("👤 Seed: creando usuario admin...");
   const adminEmail = process.env.ADMIN_EMAIL || "admin@duoindumentaria.com";
-  const adminPassword = process.env.ADMIN_PASSWORD || "Duo2026!";
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminPassword || adminPassword.length < 8) {
+    throw new Error("Definí ADMIN_PASSWORD en .env (mínimo 8 caracteres) antes de correr el seed.");
+  }
+  if (adminPassword === "Duo2026!") {
+    console.warn("⚠️  ADMIN_PASSWORD sigue siendo la de ejemplo: cambiala antes de publicar la tienda.");
+  }
   const passwordHash = await bcrypt.hash(adminPassword, 10);
+  // Al volver a correr el seed, la contraseña del admin se actualiza con la de .env
   await prisma.user.upsert({
     where: { email: adminEmail },
-    update: { role: "admin", emailVerified: new Date() },
+    update: { role: "admin", emailVerified: new Date(), passwordHash },
     create: {
       email: adminEmail,
       name: "Administrador Duo",
@@ -111,7 +118,7 @@ async function main() {
     },
   });
 
-  console.log(`✅ Listo. Admin: ${adminEmail} / ${adminPassword}`);
+  console.log(`✅ Listo. Admin: ${adminEmail} (contraseña: la de ADMIN_PASSWORD en .env)`);
 }
 
 main()

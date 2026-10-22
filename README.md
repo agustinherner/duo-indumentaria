@@ -39,11 +39,13 @@ Abrí **http://localhost:3000** en el navegador. ¡Listo!
 
 ## 🔑 Acceso al panel de administración
 
-El seed crea un usuario administrador (podés cambiar estos datos en `.env`):
+El seed crea un usuario administrador con los datos de `.env`:
 
 - **URL:** http://localhost:3000/admin
-- **Email:** `admin@duoindumentaria.com`
-- **Contraseña:** `Duo2026!`
+- **Email:** el de `ADMIN_EMAIL` (por defecto `admin@duoindumentaria.com`)
+- **Contraseña:** la de `ADMIN_PASSWORD` (obligatoria, mínimo 8 caracteres)
+
+Si cambiás la contraseña en `.env`, corré `npm run db:seed` para actualizarla en la base.
 
 Desde el admin podés crear/editar categorías, productos, precios, stock y subir imágenes.
 Cada producto muestra un **emoji** como placeholder hasta que le cargues una foto real.

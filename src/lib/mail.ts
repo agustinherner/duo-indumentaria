@@ -27,6 +27,10 @@ type MailOptions = { to: string; subject: string; html: string };
  */
 export async function sendMail({ to, subject, html }: MailOptions) {
   if (!transporter) {
+    if (process.env.NODE_ENV === "production") {
+      console.error(`⚠️ SMTP no configurado: no se envió el mail "${subject}" a ${to}.`);
+      return { ok: false, dev: true };
+    }
     console.log("\n📧 [MAIL - modo desarrollo, SMTP no configurado]");
     console.log(`Para: ${to}`);
     console.log(`Asunto: ${subject}`);

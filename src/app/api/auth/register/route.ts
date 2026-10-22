@@ -50,9 +50,13 @@ export async function POST(req: NextRequest) {
     html: verificationEmailHtml(user.name, link),
   });
 
+  // El link solo se muestra en pantalla en desarrollo: en producción permitiría
+  // verificar mails ajenos si el SMTP no está configurado.
+  const showDevLink = mail.dev && process.env.NODE_ENV !== "production";
+
   return NextResponse.json({
     ok: true,
-    devMailLink: mail.dev ? link : undefined,
+    devMailLink: showDevLink ? link : undefined,
     message: "Cuenta creada. Revisá tu email para verificar la cuenta.",
   });
 }
