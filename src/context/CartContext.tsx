@@ -11,6 +11,8 @@ export type CartItem = {
   slug: string;
   size: string;
   quantity: number;
+  /** Stock del producto al agregarlo. Puede quedar desactualizado: el checkout vuelve a validar en el servidor. */
+  stock?: number;
 };
 
 type CartContextType = {
@@ -45,15 +47,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (loaded) localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items, loaded]);
 
+  /**
+   * Cuántas unidades puede tener una línea del carrito. El stock es por producto,
+   * así que se descuentan las unidades del mismo producto en otros talles.
+   */
+  function maxQuantity(list: CartItem[], productId: string, size: string, stock: number | undefined) {
+    if (stock === undefined) return Infinity;
+    const otherSizes = list
+      .filter((i) => i.productId === productId && i.size !== size)
+      .reduce((n, i) => n + i.quantity, 0);
+    return Math.max(0, stock - otherSizes);
+  }
+
   function addItem(item: Omit<CartItem, "quantity">, quantity = 1) {
     setItems((prev) => {
       const idx = prev.findIndex((i) => i.productId === item.productId && i.size === item.size);
+      const max = maxQuantity(prev, item.productId, item.size, item.stock);
       if (idx >= 0) {
         const next = [...prev];
-        next[idx] = { ...next[idx], quantity: next[idx].quantity + quantity };
+        next[idx] = { ...next[idx], stock: item.stock, quantity: Math.max(1, Math.min(max, next[idx].quantity + quantity)) };
         return next;
       }
-      return [...prev, { ...item, quantity }];
+      if (max <= 0) return prev;
+      return [...prev, { ...item, quantity: Math.min(max, quantity) }];
     });
     setOpen(true);
   }
@@ -66,7 +82,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) =>
       prev
         .map((i) =>
-          i.productId === productId && i.size === size ? { ...i, quantity: Math.max(1, quantity) } : i
+          i.productId === productId && i.size === size
+            ? { ...i, quantity: Math.max(1, Math.min(maxQuantity(prev, productId, size, i.stock), quantity)) }
+            : i
         )
         .filter((i) => i.quantity > 0)
     );

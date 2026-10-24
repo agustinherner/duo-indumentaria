@@ -67,6 +67,7 @@ export default function AddToCartForm({ product }: { product: Product }) {
               imageUrl: product.imageUrl,
               slug: product.slug,
               size,
+              stock: product.stock,
             },
             qty
           )
