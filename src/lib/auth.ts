@@ -6,16 +6,16 @@ import { prisma } from "./prisma";
 const COOKIE_NAME = "duo_session";
 
 /**
- * En producción la clave es obligatoria: sin ella cualquiera podría firmar
- * una sesión de admin. En desarrollo se usa una clave fija para no trabar.
+ * La clave es obligatoria siempre: con una clave fija cualquiera que conozca el
+ * código podría firmar una sesión de admin. next.config.js ya frena el arranque
+ * si falta; esto cubre los entornos donde ese chequeo no corre.
  */
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
-  if (secret) return secret;
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Falta JWT_SECRET en las variables de entorno.");
+  if (!secret) {
+    throw new Error("Falta JWT_SECRET en las variables de entorno. Definila en .env (ver .env.example).");
   }
-  return "insecure-dev-secret";
+  return secret;
 }
 
 export type SessionUser = {
