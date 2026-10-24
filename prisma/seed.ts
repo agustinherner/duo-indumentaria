@@ -101,9 +101,6 @@ async function main() {
   if (!adminPassword || adminPassword.length < 8) {
     throw new Error("Definí ADMIN_PASSWORD en .env (mínimo 8 caracteres) antes de correr el seed.");
   }
-  if (adminPassword === "Duo2026!") {
-    console.warn("⚠️  ADMIN_PASSWORD sigue siendo la de ejemplo: cambiala antes de publicar la tienda.");
-  }
   const passwordHash = await bcrypt.hash(adminPassword, 10);
   // Al volver a correr el seed, la contraseña del admin se actualiza con la de .env
   await prisma.user.upsert({

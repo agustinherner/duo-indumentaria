@@ -27,6 +27,7 @@ npm install
 # 2. Crear el archivo de configuración
 cp .env.example .env
 #    (en Windows: copy .env.example .env)
+#    Completá JWT_SECRET (obligatoria: sin ella la app no arranca) y ADMIN_PASSWORD.
 
 # 3. Crear la base de datos y cargar datos de ejemplo
 npm run setup
@@ -46,6 +47,8 @@ El seed crea un usuario administrador con los datos de `.env`:
 - **Contraseña:** la de `ADMIN_PASSWORD` (obligatoria, mínimo 8 caracteres)
 
 Si cambiás la contraseña en `.env`, corré `npm run db:seed` para actualizarla en la base.
+Ojo: el seed también vuelve a crear los productos de ejemplo que hayas borrado y restablece
+nombres y emojis de las categorías, así que no lo uses sobre la base real de la tienda.
 
 Desde el admin podés crear/editar categorías, productos, precios, stock y subir imágenes.
 Cada producto muestra un **emoji** como placeholder hasta que le cargues una foto real.
