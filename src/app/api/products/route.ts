@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
       active: true,
       ...(category ? { category: { slug: category } } : {}),
       ...(featured === "true" ? { featured: true } : {}),
-      ...(q ? { name: { contains: q } } : {}),
+      ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
     },
     include: { category: { select: { name: true, slug: true } } },
     orderBy: { createdAt: "desc" },

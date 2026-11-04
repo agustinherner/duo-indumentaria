@@ -18,25 +18,63 @@ newsletter, checkout con **Mercado Pago** y un **panel de administración** comp
 
 ## 🚀 Puesta en marcha (paso a paso)
 
-Necesitás tener **Node.js 18+** instalado.
+Necesitás tener **Node.js 18+** y **PostgreSQL 14+** instalados.
+
+### 1. Instalar PostgreSQL y crear la base local
+
+- **Windows / macOS:** descargá el instalador desde https://www.postgresql.org/download/
+  (en macOS también sirve [Postgres.app](https://postgresapp.com/)). Durante la instalación
+  elegís la contraseña del usuario `postgres`; anotala.
+- **Linux (Debian/Ubuntu):** `sudo apt install postgresql`
+- **Con Docker (cualquier sistema):**
+  `docker run --name duo-postgres -e POSTGRES_USER=duo -e POSTGRES_PASSWORD=tu_clave -e POSTGRES_DB=duo_indumentaria -p 5432:5432 -d postgres:16`
+  (con esto ya tenés usuario y base: saltá al paso 2).
+
+Después creá un usuario y una base para la tienda. Abrí `psql` como `postgres`
+(en Windows: "SQL Shell (psql)" desde el menú Inicio; en Linux: `sudo -u postgres psql`) y corré:
+
+```sql
+CREATE USER duo WITH PASSWORD 'tu_clave' CREATEDB;
+CREATE DATABASE duo_indumentaria OWNER duo;
+```
+
+> `CREATEDB` hace falta para `prisma migrate dev`, que usa una base temporal ("shadow") para
+> comparar el esquema. También podés hacer lo mismo desde pgAdmin.
+
+### 2. Configurar y arrancar
 
 ```bash
-# 1. Instalar dependencias
+# Instalar dependencias
 npm install
 
-# 2. Crear el archivo de configuración
+# Crear el archivo de configuración
 cp .env.example .env
-#    (en Windows: copy .env.example .env)
-#    Completá JWT_SECRET (obligatoria: sin ella la app no arranca) y ADMIN_PASSWORD.
+#   (en Windows: copy .env.example .env)
+#   Completá:
+#   - DATABASE_URL con tu usuario y clave, por ejemplo:
+#       postgresql://duo:tu_clave@localhost:5432/duo_indumentaria?schema=public
+#   - JWT_SECRET (obligatoria: sin ella la app no arranca)
+#   - ADMIN_PASSWORD
 
-# 3. Crear la base de datos y cargar datos de ejemplo
+# Crear las tablas (aplica las migraciones) y cargar datos de ejemplo
 npm run setup
 
-# 4. Levantar el servidor de desarrollo
+# Levantar el servidor de desarrollo
 npm run dev
 ```
 
 Abrí **http://localhost:3000** en el navegador. ¡Listo!
+
+### Migraciones de la base
+
+El esquema está en `prisma/schema.prisma` y los cambios se guardan como migraciones en
+`prisma/migrations/` (van en git).
+
+- **Cambiaste el esquema** → `npm run db:migrate -- --name descripcion_del_cambio`
+  (crea la migración nueva y la aplica en tu base local).
+- **Aplicar migraciones existentes** (después de un `git pull`, o en producción) →
+  `npm run db:deploy`. No crea migraciones ni borra datos.
+- No uses `prisma db push`: cambia la base sin dejar migración.
 
 ## 🔑 Acceso al panel de administración
 
@@ -100,9 +138,10 @@ src/
     api/             → endpoints (auth, products, categories, newsletter, checkout, admin, webhooks)
   components/        → Header, Footer, CartDrawer, ProductCard, etc.
   context/           → CartContext (estado del carrito)
-  lib/               → prisma, auth, mail, mercadopago, utils
+  lib/               → prisma, auth, mail, mercadopago, rateLimit, utils
 prisma/
   schema.prisma      → modelo de datos
+  migrations/        → migraciones de la base (PostgreSQL)
   seed.ts            → categorías + productos de ejemplo + admin
 public/
   logo.jpeg          → logo de Duo Indumentaria
@@ -116,15 +155,20 @@ public/
 | `npm run dev` | Servidor de desarrollo |
 | `npm run build` | Compilar para producción |
 | `npm run start` | Servir la versión de producción |
-| `npm run setup` | Crear la base + cargar datos de ejemplo |
+| `npm run lint` | Revisar el código con ESLint |
+| `npm run setup` | Aplicar migraciones + cargar datos de ejemplo |
+| `npm run db:migrate` | Crear y aplicar una migración nueva (desarrollo) |
+| `npm run db:deploy` | Aplicar migraciones pendientes (producción / después de un pull) |
 | `npm run db:seed` | Volver a cargar los datos de ejemplo |
 | `npm run db:studio` | Abrir Prisma Studio (ver/editar la base visualmente) |
 
 ## 📦 Pasar a producción
 
-- **Base de datos:** el proyecto usa SQLite (archivo local) por simplicidad. Para producción
-  se recomienda PostgreSQL: cambiá `provider` a `postgresql` en `prisma/schema.prisma` y poné
-  la URL de tu base en `DATABASE_URL`.
+- **Base de datos:** PostgreSQL. Poné la URL de la base de producción en `DATABASE_URL` y
+  corré `npm run db:deploy` en cada deploy, antes de arrancar la app.
+- **Límite de intentos:** login, registro y newsletter tienen límite por IP (y por email en
+  el login). Los contadores viven en memoria: con varias instancias o en serverless hay que
+  pasarlos a Redis/Upstash (ver `src/lib/rateLimit.ts`).
 - **Hosting:** funciona en Vercel, Railway, Render, un VPS, etc. Recordá setear todas las
   variables de entorno y cambiar `NEXT_PUBLIC_SITE_URL` por tu dominio real.
 - **Seguridad:** cambiá `JWT_SECRET` por una clave larga y aleatoria, y la contraseña del admin.
