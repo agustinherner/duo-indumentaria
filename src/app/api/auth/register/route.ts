@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { sendMail, verificationEmailHtml } from "@/lib/mail";
+import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rateLimit";
 
 const schema = z.object({
   name: z.string().min(2, "Ingresá tu nombre"),
@@ -11,7 +12,14 @@ const schema = z.object({
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
 });
 
+// 5 intentos por hora por IP (registro): frena robots que crean cuentas o cargan mails en masa.
+const LIMIT = 5;
+const WINDOW_MS = 60 * 60 * 1000;
+
 export async function POST(req: NextRequest) {
+  const byIp = await rateLimit({ key: `register:ip:${getClientIp(req)}`, limit: LIMIT, windowMs: WINDOW_MS });
+  if (!byIp.ok) return tooManyRequests(byIp, "intentos de registro");
+
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {

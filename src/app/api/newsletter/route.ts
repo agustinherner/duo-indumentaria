@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendMail, newsletterWelcomeHtml } from "@/lib/mail";
+import { rateLimit, getClientIp, tooManyRequests } from "@/lib/rateLimit";
 
 const schema = z.object({ email: z.string().email("Email inválido") });
 
+// 5 intentos por hora por IP (newsletter): frena robots que crean cuentas o cargan mails en masa.
+const LIMIT = 5;
+const WINDOW_MS = 60 * 60 * 1000;
+
 export async function POST(req: NextRequest) {
+  const byIp = await rateLimit({ key: `newsletter:ip:${getClientIp(req)}`, limit: LIMIT, windowMs: WINDOW_MS });
+  if (!byIp.ok) return tooManyRequests(byIp, "intentos de suscripción");
+
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
