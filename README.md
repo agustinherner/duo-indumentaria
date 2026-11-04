@@ -165,7 +165,8 @@ public/
 ## 📦 Pasar a producción
 
 - **Base de datos:** PostgreSQL. Poné la URL de la base de producción en `DATABASE_URL` y
-  corré `npm run db:deploy` en cada deploy, antes de arrancar la app.
+  corré `npm run db:deploy` en cada deploy, antes de arrancar la app. Comparativa de hosting
+  en [`docs/HOSTING.md`](docs/HOSTING.md).
 - **Límite de intentos:** login, registro y newsletter tienen límite por IP (y por email en
   el login). Los contadores viven en memoria: con varias instancias o en serverless hay que
   pasarlos a Redis/Upstash (ver `src/lib/rateLimit.ts`).
