@@ -91,6 +91,18 @@ nombres y emojis de las categorías, así que no lo uses sobre la base real de l
 Desde el admin podés crear/editar categorías, productos, precios, stock y subir imágenes.
 Cada producto muestra un **emoji** como placeholder hasta que le cargues una foto real.
 
+## 🖼️ Imágenes de productos (Cloudinary)
+
+Las fotos que se suben desde el panel se guardan en **Cloudinary** cuando están configuradas
+las variables `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET`
+(se sacan del Dashboard de https://console.cloudinary.com).
+
+- **En producción son obligatorias.** Sin ellas, el panel muestra un error al subir una foto:
+  la carpeta `public/uploads` se borra en cada deploy y Next no sirve archivos nuevos después de compilar.
+- **En desarrollo son opcionales.** Si están vacías, las fotos se guardan en `public/uploads` como antes.
+- Las imágenes quedan en la carpeta `duo-indumentaria/productos` de Cloudinary (se cambia con `CLOUDINARY_FOLDER`).
+- Las fotos que ya estaban en `public/uploads` se siguen viendo: solo cambian las que se suban de ahora en más.
+
 ## 📧 Envío de mails (verificación y newsletter)
 
 Por defecto, **sin configurar SMTP**, los mails NO se envían: en su lugar se imprimen en la
@@ -138,14 +150,14 @@ src/
     api/             → endpoints (auth, products, categories, newsletter, checkout, admin, webhooks)
   components/        → Header, Footer, CartDrawer, ProductCard, etc.
   context/           → CartContext (estado del carrito)
-  lib/               → prisma, auth, mail, mercadopago, rateLimit, utils
+  lib/               → prisma, auth, mail, mercadopago, rateLimit, storage, utils
 prisma/
   schema.prisma      → modelo de datos
   migrations/        → migraciones de la base (PostgreSQL)
   seed.ts            → categorías + productos de ejemplo + admin
 public/
   logo.jpeg          → logo de Duo Indumentaria
-  uploads/           → imágenes subidas desde el admin
+  uploads/           → imágenes subidas en desarrollo (en producción van a Cloudinary)
 ```
 
 ## 🛠️ Comandos útiles
